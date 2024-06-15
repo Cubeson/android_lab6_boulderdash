@@ -23,30 +23,24 @@ interface Animable{
     fun changeAnimationIndex()
 }
 
-open class GameObject(private val bitMap: Bitmap) {
+abstract class GameObject(var row: Int,var col: Int) {
 
     companion object{
         const val TILE_WIDTH = 32
         const val TILE_HEIGHT = 32
     }
-    lateinit var gameObjects : List<MutableList<GameObject>>
-    val mapColumns : Int
-        get(){
-            return gameObjects[0].size
-        }
-    val mapRows : Int
-        get(){
-            return gameObjects.size
-        }
-    var row = 0
-    var col = 0
-    var markedForDestruction = false
-    open fun draw(canvas: Canvas, row:Int, col:Int, camera:Camera){
+    //lateinit var gameObjects : List<MutableList<GameObject>>
+    lateinit var gameMap : GameMap
+    lateinit var bitmap: Bitmap
+    var isRemoved = false
+    open fun draw(canvas: Canvas, camera:Camera){
         drawOnCanvas(canvas,row,col,camera,null)
     }
+
     protected fun drawOnCanvas(canvas: Canvas, row: Int, col:Int, camera: Camera, srcRect:Rect? ){
         val zoom = camera.zoom
-
+        val mapColumns = gameMap.columns
+        val mapRows = gameMap.rows
 
         var offsetXUnscaled = (camera.position.x-mapColumns/2)
         var offsetYUnscaled = camera.position.y-mapRows/2
@@ -63,11 +57,13 @@ open class GameObject(private val bitMap: Bitmap) {
         val posY = (row * tileHeightLocal) - (offsetY*zoom).toInt()
 
         val destRect = Rect(posX,posY,posX+tileWidthLocal,posY+tileHeightLocal)
-        canvas.drawBitmap(bitMap,srcRect,destRect,null)
+        canvas.drawBitmap(bitmap,srcRect,destRect,null)
     }
     fun swap(other: GameObject){
-        gameObjects[other.row][other.col] = this
-        gameObjects[this.row][this.col] = other
+        //gameObjects[other.row][other.col] = this
+        //gameObjects[this.row][this.col] = other
+        gameMap.set(other.row,other.col,this)
+        gameMap.set(this.row,this.col,other)
 
         val tmpCol = this.col
         val tmpRow = this.row
@@ -78,51 +74,94 @@ open class GameObject(private val bitMap: Bitmap) {
         other.col = tmpCol
         other.row = tmpRow
     }
-    open fun onDestruction(){}
+    fun replaceWithEmptyTile(){
+        val goEmpty = Empty(row,col)
+        goEmpty.gameMap = gameMap
+        gameMap.set(row,col,goEmpty)
+        println(javaClass)
+        isRemoved = true
+
+        //gameObjects[other.row][other.col] = goEmpty
+    }
     open fun onUpdate(deltaTime: Float){}
 }
 
-class Rockford(bitmap: Bitmap) : GameObject(bitmap), Animable{
+class Rockford(row: Int,col: Int) : GameObject(row,col), Animable{
     private var bmpIndex = 0
     private var animationSetIndex = 0
     private var bmpIndexMax = -1
 
+    var points = 0
+
 
     init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.rockford
         bmpIndexMax = bitmap.width / TILE_WIDTH
     }
 
-    override fun draw(canvas: Canvas, row:Int, col:Int, camera:Camera){
+    override fun draw(canvas: Canvas, camera:Camera){
         val rectLeft = bmpIndex * TILE_WIDTH
         val rectTop = animationSetIndex * TILE_HEIGHT
         val rectRight = rectLeft + TILE_WIDTH
         val rectBottom = rectTop + TILE_HEIGHT
         val srcRect = Rect(rectLeft,rectTop,rectRight,rectBottom)
-        println(bmpIndex)
         drawOnCanvas(canvas,row,col,camera,srcRect)
     }
     override fun onUpdate(deltaTime: Float){
 
     }
     fun moveUp(){
-        if(row-1 >= mapRows) return
-        val other = gameObjects[row-1][col]
-        swap(other)
+        if(row-1 < 0) return
+        val other = gameMap.at(row-1,col)
+        animationSetIndex = 0
+        onMove(other)
     }
     fun moveDown(){
-        if(row+1 >= mapRows) return
-        val other = gameObjects[row+1][col]
-        swap(other)
+        if(row+1 >= gameMap.rows) return
+        val other = gameMap.at(row+1,col)
+        animationSetIndex = 0
+        onMove(other)
     }
     fun moveRight(){
-        if(col+1 >= mapColumns) return
-        val other = gameObjects[row][col+1]
-        swap(other)
+        if(col+1 >= gameMap.columns) return
+        val other = gameMap.at(row,col+1)
+        animationSetIndex = 2
+        onMove(other)
     }
     fun moveLeft(){
         if(col-1 < 0) return
-        val other = gameObjects[row][col-1]
-        swap(other)
+        val other = gameMap.at(row,col-1)
+        animationSetIndex = 1
+        onMove(other)
+    }
+    fun stop() {
+        animationSetIndex = 3
+    }
+
+    private fun onMove(other: GameObject){
+
+        when(other){
+            is Empty -> {
+                swap(other)
+            }
+            is Wall -> {}
+            is Border -> {}
+            is Ground -> {
+                swap(other)
+                other.replaceWithEmptyTile()
+            }
+            is Diamond -> {
+                swap(other)
+                other.replaceWithEmptyTile()
+                points++
+            }
+            is Butterfly -> {}
+            is Rock -> {}
+            is Rockford -> {
+                throw Exception("How did that happen?")
+            }
+        }
     }
     override fun changeAnimationIndex(){
         bmpIndex++
@@ -130,29 +169,107 @@ class Rockford(bitmap: Bitmap) : GameObject(bitmap), Animable{
             bmpIndex = 0
         }
     }
+
+
 }
-class Empty(bitMap: Bitmap) : GameObject(bitMap)
-class Wall(bitMap: Bitmap) : GameObject(bitMap)
-class Border(bitMap: Bitmap) : GameObject(bitMap)
-class Ground(bitMap: Bitmap) : GameObject(bitMap)
-class Diamond(bitMap: Bitmap) : GameObject(bitMap)
-class Butterfly(bitMap: Bitmap) : GameObject(bitMap)
-class Mob(bitMap: Bitmap) : GameObject(bitMap)
-class Door(bitMap: Bitmap) : GameObject(bitMap)
+class Empty(row: Int,col: Int) : GameObject(row,col){
+    init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.empty
+    }
+}
+class Wall(row: Int,col: Int) : GameObject(row,col){
+    init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.wall
+    }
+}
+class Border(row: Int,col: Int) : GameObject(row,col){
+    init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.border
+    }
+}
+class Ground(row: Int,col: Int) : GameObject(row,col){
+    init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.ground
+    }
+}
+class Diamond(row: Int,col: Int) : GameObject(row,col), Animable{
+    private var bmpIndex = 0
+    private var bmpIndexMax = 0
+    init {
+        bitmap = BitmapLibrary.diamond
+        bmpIndexMax = bitmap.width / TILE_WIDTH
+    }
 
 
-class Rock(bitMap: Bitmap) : GameObject(bitMap){
+    override fun draw(canvas: Canvas, camera: Camera) {
+        val rectLeft = bmpIndex * TILE_WIDTH
+        val rectTop = 0 * TILE_HEIGHT
+        val rectRight = rectLeft + TILE_WIDTH
+        val rectBottom = rectTop + TILE_HEIGHT
+        val srcRect = Rect(rectLeft,rectTop,rectRight,rectBottom)
+        drawOnCanvas(canvas,row,col,camera,srcRect)
+    }
+
+    override fun changeAnimationIndex() {
+        bmpIndex++
+        if(bmpIndex>=bmpIndexMax){
+            bmpIndex = 0
+        }
+    }
+}
+class Butterfly(row: Int,col: Int) : GameObject(row,col){
+    init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.butterfly
+    }
+}
+
+
+class Rock(row: Int,col: Int) : GameObject(row,col){
+    init {
+        val bmpLib = BitmapLibrary
+        bitmap = bmpLib.rock
+    }
+    private var isFalling = false
+
+
     override fun onUpdate(deltaTime: Float) {
-        super.onUpdate(deltaTime)
-        if(row+1 > mapRows) return
-        val other = gameObjects[row+1][col]
-        if(other is Empty){
+        if(gameMap.at(row+1,col) is Empty){
+            // Down
+            val other = gameMap.at(row+1,col)
+            isFalling = true
             swap(other)
-        }else if(other is Rockford){
-            swap(other)
-            other.markedForDestruction = true
-
+            return
+        }
+        if(gameMap.at(row+1,col) is Rockford){
+            // Down Rockford and falling
+            if(isFalling) {
+                val other = gameMap.at(row+1,col)
+                swap(other)
+                other.replaceWithEmptyTile()
+                return
+            }
         }
 
+        if(gameMap.at(row,col+1) is Empty && gameMap.at(row+1,col+1) is Empty){
+            // Right
+            val other = gameMap.at(row,col+1)
+            swap(other)
+            isFalling = true
+            return
+        }
+        if(gameMap.at(row,col-1) is Empty && gameMap.at(row+1,col-1) is Empty){
+            // Left
+            val other = gameMap.at(row,col-1)
+            swap(other)
+            isFalling = true
+            return
+        }
+        isFalling = false
     }
+
 }
