@@ -22,6 +22,7 @@ object BitmapLibrary{
         arrow_up = BitmapFactory.decodeResource(resources,R.drawable.arrow_up)
         arrow_left = BitmapFactory.decodeResource(resources,R.drawable.arrow_left)
         arrow_right = BitmapFactory.decodeResource(resources,R.drawable.arrow_right)
+        exit = BitmapFactory.decodeResource(resources,R.drawable.exit)
         _isInitialized = true
     }
     lateinit var border : Bitmap
@@ -32,6 +33,7 @@ object BitmapLibrary{
     lateinit var diamond : Bitmap
     lateinit var rock : Bitmap
     lateinit var rockford : Bitmap
+    lateinit var exit : Bitmap
 
     lateinit var arrow_down : Bitmap
     lateinit var arrow_up : Bitmap

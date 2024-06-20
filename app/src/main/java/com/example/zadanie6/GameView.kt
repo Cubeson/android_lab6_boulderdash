@@ -6,11 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.SystemClock
-import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.core.content.ContextCompat
+import com.example.zadanie6.gameObjects.Animable
+import com.example.zadanie6.gameObjects.Rockford
 
 enum class RockfordMovement{
     TOP,
@@ -19,25 +20,32 @@ enum class RockfordMovement{
     BOTTOM,
     STOP
 }
+enum class FinishedStatus{
+    PLAYING,
+    VICTORY,
+    LOSS
+}
+object GameState{
+    fun initialize(){
+        finishedStatus = FinishedStatus.PLAYING
+        ready = false
+        running = false
+    }
+    var finishedStatus = FinishedStatus.PLAYING
+    var ready = false
+    var running = false
+}
 class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(context), Runnable {
-
-    private var ready = false
-    private var running = false
 
     private var lastFrame = 0L
     private var deltaTime = 0f
 
-    private val tps = 2
+    private val tps = 4
     private var tpsAccumulator = 0f
 
     private var animationChangeAccumulator = 0f
 
     private val camera = Camera(Vec2(0f,0f))
-    //private lateinit var rockford : Rockford
-    private var buttonHeight = 100
-    private var buttonWidth = 100
-    private val buttonMargin = 50
-    private val buttonSpacing = 35
 
     private val buttons : MutableList<GameButton> = mutableListOf()
 
@@ -49,7 +57,7 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
     init{
         holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                if(!ready){
+                if(!GameState.ready){
                     initializeGame()
                 }
             }
@@ -66,18 +74,23 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
         })
     }
 
+
+
     private fun initializeGame(){
 
-        //buttonWidth = (width * 0.15).toInt()
-        //buttonHeight = (height *0.15).toInt()
+        val buttonMargin = 50
+        val buttonSpacing = 35
 
-        val buttonTop =     GameButton( Rect(buttonMargin,height/2,buttonMargin+buttonWidth,(height/2)+buttonHeight),RockfordMovement.TOP,BitmapLibrary.arrow_up)
+        val buttonWidth = (width * 0.10).toInt()
+        val buttonHeight = (height *0.10).toInt()
 
-        val buttonBot =     GameButton( Rect(buttonMargin,(height/2)+buttonHeight+buttonSpacing,buttonMargin+buttonWidth,(height/2)+buttonHeight+buttonSpacing+buttonHeight),RockfordMovement.BOTTOM,BitmapLibrary.arrow_down)
+        val buttonTop =     GameButton( Rect(buttonMargin,(3*height/4),buttonMargin+buttonWidth,(3*height/4)+buttonHeight),RockfordMovement.TOP,BitmapLibrary.arrow_up)
 
-        val buttonRight =   GameButton( Rect(width-buttonMargin-buttonWidth,height/2,width-buttonMargin,(height/2)+buttonHeight),RockfordMovement.RIGHT,BitmapLibrary.arrow_right)
+        val buttonBot =     GameButton( Rect(buttonMargin,(3*height/4)+buttonHeight+buttonSpacing,buttonMargin+buttonWidth,(3*height/4)+buttonHeight+buttonSpacing+buttonHeight),RockfordMovement.BOTTOM,BitmapLibrary.arrow_down)
 
-        val buttonLeft =    GameButton( Rect(width-buttonMargin-buttonWidth-buttonMargin-buttonWidth,height/2,width-buttonMargin-buttonWidth-buttonMargin,(height/2)+buttonHeight),RockfordMovement.LEFT,BitmapLibrary.arrow_left)
+        val buttonRight =   GameButton( Rect(width-buttonMargin-buttonWidth,(3*height/4),width-buttonMargin,(3*height/4)+buttonHeight),RockfordMovement.RIGHT,BitmapLibrary.arrow_right)
+
+        val buttonLeft =    GameButton( Rect(width-buttonMargin-buttonWidth-buttonMargin-buttonWidth,(3*height/4),width-buttonMargin-buttonWidth-buttonMargin,(3*height/4)+buttonHeight),RockfordMovement.LEFT,BitmapLibrary.arrow_left)
 
 
         buttons.add(buttonTop)
@@ -86,12 +99,12 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
         buttons.add(buttonLeft)
 
 
-
         lastFrame = SystemClock.uptimeMillis()
-        val rockford = gameMap.gameObjects.single{g -> g is Rockford} as Rockford
+        val rockford = gameMap.gameObjects.singleOrNull{ g -> g is Rockford} as Rockford?
+            ?: throw Exception("No Rockford GameObject found on this map")
         camera.position.x = rockford.col.toFloat()
         camera.position.y = rockford.row.toFloat()
-        ready = true
+        GameState.ready = true
         resume()
     }
 
@@ -100,13 +113,12 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
         val now = SystemClock.uptimeMillis()
         val deltaTimeInMillis = now - lastFrame
         lastFrame = now
-        //println(deltaTimeInMillis)
         return deltaTimeInMillis / 1000f
     }
-
+    private var changeMapThread : Thread? = null
     override fun run() {
-        while(running){
-            if(!ready){
+        while(GameState.running){
+            if(!GameState.ready){
                 continue
             }
             deltaTime = getDeltaTimeInSeconds()
@@ -129,20 +141,17 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
                 animationChangeAccumulator = 0f
             }
             val rockford = gameMap.gameObjects.singleOrNull{g -> g is Rockford} as Rockford?
-            gameLoop(rockford)
-            if(rockford != null){
-                camera.approachTo(Vec2(rockford.col.toFloat(),rockford.row.toFloat()),deltaTime)
+            if(GameState.finishedStatus == FinishedStatus.PLAYING){
+                gameLoop(rockford)
+                if(rockford != null){
+                    camera.approachTo(Vec2(rockford.col.toFloat(),rockford.row.toFloat()),deltaTime)
+                }
             }
-
-            draw(rockford)
-
-
-            //camera.zoom += deltaTime * 0.33f
-            //if(camera.zoom >= 10f) camera.zoom = 1f
+            draw()
         }
     }
 
-    private fun draw(rockford: Rockford?){
+    private fun draw(){
         val canvas = holder.lockCanvas()
         canvas.drawColor(ContextCompat.getColor(context,R.color.black))
 
@@ -153,8 +162,14 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
         for (btn in buttons){
             btn.draw(canvas)
         }
-        if(rockford == null){
-            drawGameOver(canvas)
+        when(GameState.finishedStatus){
+            FinishedStatus.LOSS -> {
+                drawGameOver(canvas)
+            }
+            FinishedStatus.VICTORY ->{
+                drawVictory(canvas)
+            }
+            else -> {}
         }
 
         holder.unlockCanvasAndPost(canvas)
@@ -169,10 +184,20 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
         val yPos = height/2f
         canvas.drawText("GAME OVER",xPos,yPos,paintText)
     }
+    private fun drawVictory(canvas:Canvas){
+        val paintText = Paint()
+        val paintColor = Color.rgb(0,255,0)
+        paintText.setColor(paintColor)
+        paintText.textSize = 150f
+        paintText.textAlign = Paint.Align.CENTER
+        val xPos = width/2f
+        val yPos = height/2f
+        canvas.drawText("VICTORY",xPos,yPos,paintText)
+    }
     private fun gameLoop(rockford: Rockford?){
 
         tpsAccumulator += deltaTime
-        if(tpsAccumulator < 2f/tps){
+        if(tpsAccumulator < 1f/tps){
             return
         }
         tpsAccumulator = 0f
@@ -196,22 +221,24 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
+        this.parent.requestDisallowInterceptTouchEvent(true)
+        println(deltaTime)
         val x = event?.x
         val y = event?.y
         if(x != null && y != null){
             touchPosition = Vec2(x,y)
         }
 
-        return super.onTouchEvent(event)
+        return true
     }
 
     fun resume(){
-        running = true
+        GameState.running = true
         gameThread = Thread(this)
         gameThread.start()
     }
     fun pause(){
-        running = false
+        GameState.running = false
         try{
             gameThread.join()
         } catch (e : InterruptedException){

@@ -1,5 +1,7 @@
 package com.example.zadanie6
 
+import com.example.zadanie6.gameObjects.GameObject
+
 class GameMap(val columns: Int, val rows:Int, val gameObjects: MutableList<GameObject>){
     fun getColumn(index: Int): Int{
         return index % columns

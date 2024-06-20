@@ -1,19 +1,22 @@
 package com.example.zadanie6
 
-import android.graphics.BitmapFactory
 import android.graphics.BitmapFactory.Options
-import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.view.Window
-import android.view.WindowInsetsController
-import android.view.WindowManager
+import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.zadanie6.map1
+import com.example.zadanie6.gameObjects.Border
+import com.example.zadanie6.gameObjects.Butterfly
+import com.example.zadanie6.gameObjects.Diamond
+import com.example.zadanie6.gameObjects.Floor
+import com.example.zadanie6.gameObjects.Exit
+import com.example.zadanie6.gameObjects.GameObject
+import com.example.zadanie6.gameObjects.Ground
+import com.example.zadanie6.gameObjects.Rock
+import com.example.zadanie6.gameObjects.Rockford
+import com.example.zadanie6.gameObjects.Wall
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,19 +28,20 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        //val main = findViewById<ConstraintLayout>(R.id.main)
+        window.decorView.apply {
+            systemUiVisibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_FULLSCREEN
+
+        }
+
         val gameMap = createMap()
         gameView = GameView(this,gameMap)
-        //main.addView(gameView)
         setContentView(gameView)
     }
     private lateinit var gameView : GameView
 
-    //private fun createMap() : List<MutableList<GameObject>>{
     private fun createMap() : GameMap{
 
         val stringGameMap = map1.split('\n')
-        //val gameObjectGrid = mutableListOf<MutableList<GameObject>>()
         val gameObjects = mutableListOf<GameObject>()
 
         val options = Options()
@@ -56,13 +60,14 @@ class MainActivity : AppCompatActivity() {
                 val gameObject: GameObject = when(c){
                     'W' -> Border(row,col)
                     'w' -> Wall(row,col)
-                    ' ' -> Empty(row,col)
+                    ' ' -> Floor(row,col)
                     '.' -> Ground(row,col)
                     'X' -> Butterfly(row,col)
                     'd' -> Diamond(row,col)
                     'r' -> Rock(row,col)
                     'P' -> Rockford(row,col)
-                    else -> Empty(row,col)
+                    'E' -> Exit(row,col)
+                    else -> Floor(row,col)
                 }
                 gameObjects.add(gameObject)
             }

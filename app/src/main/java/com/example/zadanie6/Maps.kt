@@ -3,7 +3,7 @@ package com.example.zadanie6
 const val map1 =
             "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n" +
             "W...... ..d.r .....r.r....... ....r....W\n" +
-            "W.rXr...... .........rd..r.... ..... ..W\n" +
+            "W.rEr...... .........rd..r.... ..... ..W\n" +
             "W.......... ..r.....r.r..r........r....W\n" +
             "Wr.rr.........r......r..r....r...r.....W\n" +
             "Wr. r......... r..r........r......r.rr.W\n" +
@@ -23,3 +23,11 @@ const val map1 =
             "W... ..r. ..r.rr.........r.rd...... ..rW\n" +
             "W.d.... ..... ......... .r..r....r...r.W\n" +
             "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+
+const val map2 =
+    "WWWWWWWWWWW\n" +
+    "Wd...w...dW\n" +
+    "W....P....W\n" +
+    "W....w....W\n" +
+    "Wd..Err..dW\n" +
+    "WWWWWWWWWWW\n"
