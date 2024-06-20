@@ -104,6 +104,7 @@ class GameView(context: Context?, private val gameMap: GameMap ) : SurfaceView(c
             ?: throw Exception("No Rockford GameObject found on this map")
         camera.position.x = rockford.col.toFloat()
         camera.position.y = rockford.row.toFloat()
+        GameState.initialize()
         GameState.ready = true
         resume()
     }

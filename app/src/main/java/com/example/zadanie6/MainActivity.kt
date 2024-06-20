@@ -32,7 +32,9 @@ class MainActivity : AppCompatActivity() {
             systemUiVisibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_FULLSCREEN
 
         }
-
+        val options = Options()
+        options.inScaled = false
+        BitmapLibrary.initialize(resources,options)
         val gameMap = createMap()
         gameView = GameView(this,gameMap)
         setContentView(gameView)
@@ -44,16 +46,7 @@ class MainActivity : AppCompatActivity() {
         val stringGameMap = map1.split('\n')
         val gameObjects = mutableListOf<GameObject>()
 
-        val options = Options()
-        options.inScaled = false
-        val bmpLib = BitmapLibrary
-        if(!bmpLib.isInitialized){
-            bmpLib.initialize(resources,options)
-        }
-
         for(row in stringGameMap.indices){
-            //val rowList = mutableListOf<GameObject>()
-            //gameObjectGrid.add(rowList)
             for(col in stringGameMap[row].indices){
                 val c = stringGameMap[row][col]
 
